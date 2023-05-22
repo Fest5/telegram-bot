@@ -1,0 +1,22 @@
+{
+  "name": "telegram-todo-bot",
+  "version": "1.0.0",
+  "description": "telegram bot to manage todo list",
+  "main": "index.js",
+  "scripts": {
+    "test": "test",
+    "start": "node server.js"
+  },
+  "author": "felipe stuart",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.7.0",
+    "firebase": "^9.22.0",
+    "helmet": "^7.0.0",
+    "node-telegram-bot-api": "^0.61.0"
+  }
+}
