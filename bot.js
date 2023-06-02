@@ -1,22 +1,17 @@
 const TelegramBot = require('node-telegram-bot-api');
-require('dotenv').config();
-const {database} = require('./firebase');
-
-/* console.log(database)
+const {db} = require("./firebase")
+const { ref, set } = require("firebase/database");
 
 const newItem = {
     title: 'Buy groceries',
     description: 'Milk, eggs, bread',
   };
   
-const todoRef = database.ref('todos');
-todoRef.push(newItem)
-.then(() => {
-    console.log('New to-do item saved.');
-})
-.catch((error) => {
-    console.error('Error saving to-do item:', error);
-}); */
+function saveUserId(chatId) {
+  set(ref(db, 'users/' + chatId), {
+    id: chatId,
+  });
+}
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
@@ -28,6 +23,7 @@ bot.on('message', (msg) => {
   if (msg.text.toString().toLowerCase() == 'hi')  {
     console.log('a')
     bot.sendMessage(msg.from.id, "Hello " + msg.from.first_name + ' cutie.');
+    saveUserId(chatId)
   }
 
   console.log('mensaje recibido')
