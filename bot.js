@@ -25,6 +25,34 @@ async function createTask(userId, taskName) {
   
 }
 
+// Function to mark a task as complete for a specific user
+/* function completeTask(userId, taskId) {
+  const taskRef = db.collection('tasks').doc(userId).collection('userTasks').doc(taskId);
+
+  return taskRef.update({ status: 'completed' })
+    .then(() => {
+      console.log('Task marked as completed');
+    })
+    .catch((error) => {
+      console.error('Error completing task:', error);
+      throw error;
+    });
+} */
+
+// Function to delete a task for a specific user
+/* function deleteTask(userId, taskId) {
+  const taskRef = db.collection('tasks').doc(userId).collection('userTasks').doc(taskId);
+
+  return taskRef.delete()
+    .then(() => {
+      console.log('Task deleted successfully');
+    })
+    .catch((error) => {
+      console.error('Error deleting task:', error);
+      throw error;
+    });
+} */
+
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 // Event listener for when a user sends a message to the bot
@@ -54,15 +82,6 @@ bot.on('message', (msg) => {
 
 })
 
-// View tasks
-
-bot.onText(/Ver Tareas/, async (msg) => {
-  const chatId = msg.chat.id;
-  const allTasks = await getTasks(chatId.toString())
-  console.log(allTasks)
-  bot.sendMessage(msg.chat.id, `${JSON.stringify(allTasks)}`);
-});
-
 bot.onText(/\/start/, (msg) => {
     bot.sendMessage(msg.chat.id, "Welcome", {
     "reply_markup": {
@@ -88,7 +107,8 @@ bot.onText(/\/create/, async (msg) => {
   bot.sendMessage(chatId, `Se creo la tarea: ${taskName} con id ${newTaskId}`)
 });
 
-// Crear tarea
+// Crear tarea on reply
+
 bot.onText(/Crear Tarea/, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, "Reponse a este mensaje con el nombre de la tarea que deseas crear")
@@ -107,9 +127,30 @@ bot.onText(/Crear Tarea/, (msg) => {
       });
     });
 });
-// Borrar tarea
+
+// View tasks that are pending
+
+bot.onText(/Ver Tareas/, async (msg) => {
+  const chatId = msg.chat.id;
+  const allTasks = await getTasks(chatId.toString())
+  console.log(allTasks)
+  let formatedList = '';
+  allTasks.forEach((task, i) => {
+    if(task.status == 'pending') {
+      const item = `${i + 1}. ${task.name}\n`
+      formatedList += item
+    }
+  })
+  bot.sendMessage(msg.chat.id, `${formatedList}`);
+});
 
 // Completar tarea
+
+
+
+// Borrar tarea
+
+
 
 // Ver info de tarea
 
