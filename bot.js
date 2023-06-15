@@ -2,13 +2,22 @@ const TelegramBot = require('node-telegram-bot-api');
 const { db } = require("./firebase")
 const { randomUUID } = require('crypto');
 
+const userTasks = []
+
 // Function to get tasks for a specific user
-async function getTasks(userId) {
+async function getTasks(userId, status) {
   const tasks = await db.collection('users').doc(userId).collection('tasks').get();
   let allTasks = []
   tasks.forEach((doc) => {
-    allTasks.push(doc.data())
-  });
+    if(!status) {
+      allTasks.push({...doc.data(), id: doc.id})
+    } else {
+      if(doc.data().status === status) {
+        allTasks.push({...doc.data(), id: doc.id})
+      }
+  }}
+);
+  
   return allTasks
 }
 
@@ -21,13 +30,10 @@ async function createTask(userId, taskName) {
     name: taskName,
     status: 'pending'
   })
-  console.log('se creo')
-  
 }
 
-// Function to mark a task as complete for a specific user
-/* function completeTask(userId, taskId) {
-  const taskRef = db.collection('tasks').doc(userId).collection('userTasks').doc(taskId);
+async function completeTask(userId, taskId) {
+  const taskRef = db.collection('users').doc(userId).collection('tasks').doc(taskId);
 
   return taskRef.update({ status: 'completed' })
     .then(() => {
@@ -37,21 +43,7 @@ async function createTask(userId, taskName) {
       console.error('Error completing task:', error);
       throw error;
     });
-} */
-
-// Function to delete a task for a specific user
-/* function deleteTask(userId, taskId) {
-  const taskRef = db.collection('tasks').doc(userId).collection('userTasks').doc(taskId);
-
-  return taskRef.delete()
-    .then(() => {
-      console.log('Task deleted successfully');
-    })
-    .catch((error) => {
-      console.error('Error deleting task:', error);
-      throw error;
-    });
-} */
+}
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
@@ -97,6 +89,10 @@ bot.onText(/\/create/, async (msg) => {
   const chatId = msg.chat.id;
 
   let taskName = messageText.split(' ')
+  if(taskName.length === 1) {
+    bot.sendMessage(chatId, "Error, no recibí el nombre de la tarea, solo el comando");
+    return;
+  }
   taskName.shift()
   taskName = taskName.join(" ")
  
@@ -132,25 +128,70 @@ bot.onText(/Crear Tarea/, (msg) => {
 
 bot.onText(/Ver Tareas/, async (msg) => {
   const chatId = msg.chat.id;
-  const allTasks = await getTasks(chatId.toString())
-  console.log(allTasks)
+  const allTasks = await getTasks(chatId.toString(), 'pending')
+  if(allTasks.length === 0) {
+    bot.sendMessage(msg.chat.id, `No tienes ninguna tarea pendiente.`);
+    return;
+  }
   let formatedList = '';
-  allTasks.forEach((task, i) => {
-    if(task.status == 'pending') {
-      const item = `${i + 1}. ${task.name}\n`
-      formatedList += item
-    }
-  })
+  allTasks.forEach((task) => {
+    const item = `${task.name}\n`
+    formatedList += item
+  });
+
+  console.log('tasks', formatedList)
+
   bot.sendMessage(msg.chat.id, `${formatedList}`);
 });
 
-// Completar tarea
+// Handler for the '/complete' command
+bot.onText(/\/complete/, async (msg) => {
+  const chatId = msg.chat.id;
+  const messageText = msg.text;
 
+  // Retrieve the list of tasks for the user
+  const userTasks = await getTasks(chatId.toString(), 'pending');
 
+  // Validates the user has tasks
+  if (userTasks.length === 0) {
+    bot.sendMessage(msg.chat.id, 'You have no tasks to complete.');
+    return;
+  }
+  
+  // Separate the command and the task name
+  const messageSeparated = messageText.split(' ');
 
-// Borrar tarea
+  if (messageSeparated.length > 1 && messageSeparated[0] === '/complete' ) {
+    // If the user has provided a task name, complete it
+    const taskName = messageSeparated[1];
+    const task = userTasks.find((task) => task.name === taskName);
 
+    console.log(task)
 
+    if (task) {
+      await completeTask(chatId.toString(), task.id.toString());
+      bot.sendMessage(msg.chat.id, `Task ${taskName} completed!`);
+    } else {
+      bot.sendMessage(msg.chat.id, `Task ${taskName} not found!`);
+    }
+    return;
+  } else {
+    // If the user has not provided a task name, show a list of tasks to complete
+    
+     // Format the list of tasks as buttons
+    const taskButtons = userTasks.map((task) => [`/complete ${task.name}`]);
+
+    // Send the list of tasks as a message with reply keyboard markup
+    bot.sendMessage(msg.chat.id, 'Please select a task to complete:', {
+      reply_markup: {
+        keyboard: taskButtons,
+        one_time_keyboard: true
+      }
+    });
+  }
+
+ 
+});
 
 // Ver info de tarea
 
