@@ -1,59 +1,15 @@
 const TelegramBot = require('node-telegram-bot-api');
-const { db } = require("./firebase")
 const { randomUUID } = require('crypto');
-
-const userTasks = []
-
-// Function to get tasks for a specific user
-async function getTasks(userId, status) {
-  const tasks = await db.collection('users').doc(userId).collection('tasks').get();
-  let allTasks = []
-  tasks.forEach((doc) => {
-    if(!status) {
-      allTasks.push({...doc.data(), id: doc.id})
-    } else {
-      if(doc.data().status === status) {
-        allTasks.push({...doc.data(), id: doc.id})
-      }
-  }}
-);
-  
-  return allTasks
-}
-
-// Function to create a task for a specific user
-async function createTask(userId, taskName) {
-  const userRef = db.collection('users').doc(userId);
-  const newTaskRef = userRef.collection('tasks').doc();
-
-  await newTaskRef.set({
-    name: taskName,
-    status: 'pending'
-  })
-}
-
-async function completeTask(userId, taskId) {
-  const taskRef = db.collection('users').doc(userId).collection('tasks').doc(taskId);
-
-  return taskRef.update({ status: 'completed' })
-    .then(() => {
-      console.log('Task marked as completed');
-    })
-    .catch((error) => {
-      console.error('Error completing task:', error);
-      throw error;
-    });
-}
+const {getTasks, completeTask, createTask} = require('./functions')
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 // Event listener for when a user sends a message to the bot
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const messageText = msg.text;
 
   if (msg.text.toString().toLowerCase() == 'hi')  {
-    saveUserId(chatId)
     bot.sendMessage(msg.from.id, "Hello " + msg.from.first_name + ' cutie.');
     bot.sendMessage(msg.chat.id, "Welcome", {
       "reply_markup": {
@@ -68,6 +24,24 @@ bot.on('message', (msg) => {
 
   if (msg.text.toString().toLowerCase() == 'puto')  {
     bot.sendMessage(msg.from.id, "Qué mierda te pasa?")
+  }
+
+  if (msg.text.toString().toLowerCase() == 'Ver Tareas' || msg.text == '/list')  {
+    const chatId = msg.chat.id;
+    const allTasks = await getTasks(chatId.toString(), 'pending')
+    if(allTasks.length === 0) {
+      bot.sendMessage(msg.chat.id, `No tienes ninguna tarea pendiente.`);
+      return;
+    }
+    let formatedList = '';
+    allTasks.forEach((task) => {
+      const item = `${task.name}\n`
+      formatedList += item
+    });
+
+    console.log('tasks', formatedList)
+
+    bot.sendMessage(msg.chat.id, `${formatedList}`);
   }
 
   console.log('mensaje recibido:', messageText)
@@ -89,26 +63,8 @@ bot.onText(/\/create/, async (msg) => {
   const chatId = msg.chat.id;
 
   let taskName = messageText.split(' ')
-  if(taskName.length === 1) {
-    bot.sendMessage(chatId, "Error, no recibí el nombre de la tarea, solo el comando");
-    return;
-  }
-  taskName.shift()
-  taskName = taskName.join(" ")
- 
-  const newTaskId = await createTask(chatId.toString(), taskName)
-  if(!newTaskId) {
-    bot.sendMessage(chatId, "Error al crear la tarea");
-  }
-  bot.sendMessage(chatId, `Se creo la tarea: ${taskName} con id ${newTaskId}`)
-});
-
-// Crear tarea on reply
-
-bot.onText(/Crear Tarea/, (msg) => {
-  const chatId = msg.chat.id;
-  bot.sendMessage(chatId, "Reponse a este mensaje con el nombre de la tarea que deseas crear")
-    .then((sentMessage) => {
+  if(taskName.length == 1) {
+    bot.sendMessage(chatId, "Error, no recibí el nombre de la tarea, solo el comando. Puedes responder a este mensaje con el nombre de la tarea.").then((sentMessage) => {
       // Guarda el ID del mensaje enviado para utilizarlo como referencia en la respuesta
       const messageID = sentMessage.message_id;
 
@@ -121,27 +77,18 @@ bot.onText(/Crear Tarea/, (msg) => {
 
         bot.sendMessage(chatId, `Has creado la tarea: ${taskName}`);
       });
-    });
-});
-
-// View tasks that are pending
-
-bot.onText(/Ver Tareas/, async (msg) => {
-  const chatId = msg.chat.id;
-  const allTasks = await getTasks(chatId.toString(), 'pending')
-  if(allTasks.length === 0) {
-    bot.sendMessage(msg.chat.id, `No tienes ninguna tarea pendiente.`);
+    });;
     return;
   }
-  let formatedList = '';
-  allTasks.forEach((task) => {
-    const item = `${task.name}\n`
-    formatedList += item
-  });
+  taskName.shift()
+  taskName = taskName.join(" ")
+ 
+  const newTaskStatus = await createTask(chatId.toString(), taskName)
 
-  console.log('tasks', formatedList)
-
-  bot.sendMessage(msg.chat.id, `${formatedList}`);
+  if(!newTaskStatus === 'success') {
+    bot.sendMessage(chatId, "Error al crear la tarea");
+  }
+  bot.sendMessage(chatId, `Se creo la tarea: ${taskName}`)
 });
 
 // Handler for the '/complete' command
@@ -159,11 +106,12 @@ bot.onText(/\/complete/, async (msg) => {
   }
   
   // Separate the command and the task name
-  const messageSeparated = messageText.split(' ');
+  let messageSeparated = messageText.split(' ');
 
   if (messageSeparated.length > 1 && messageSeparated[0] === '/complete' ) {
     // If the user has provided a task name, complete it
-    const taskName = messageSeparated[1];
+    messageSeparated.shift();
+    const taskName = messageSeparated.join(' '); // CORREGIR ERROR ACA
     const task = userTasks.find((task) => task.name === taskName);
 
     console.log(task)
@@ -189,8 +137,6 @@ bot.onText(/\/complete/, async (msg) => {
       }
     });
   }
-
- 
 });
 
 // Ver info de tarea
