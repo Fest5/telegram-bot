@@ -10,7 +10,7 @@ async function sendTaskList(chatId, reminder) {
   const allTasks = await getTasks(chatId.toString(), 'pending')
 
   if(allTasks.length === 0) {
-    bot.sendMessage(chatId, `You have no pending tasks.`);
+    bot.sendMessage(chatId, `You don't have pending tasks.`);
     return;
   }
 
@@ -29,17 +29,17 @@ async function newTask(chatId, messageText) {
   }
 
   if(!taskName) {
-    bot.sendMessage(chatId, "Error, no recibí el nombre de la tarea, solo el comando. Debes escribir el nombre de la tarea luego del comando /create")
+    bot.sendMessage(chatId, "Error, i didn't receive the task name, just the command. You must write the task name after the /create command.")
     return;
   }
 
   const newTaskStatus = await createTask(chatId.toString(), taskName)
 
   if(!newTaskStatus === 'success') {
-    bot.sendMessage(chatId, "Error al crear la tarea");
+    bot.sendMessage(chatId, "Error creating the task.");
     return;
   }
-  bot.sendMessage(chatId, `Se creo la tarea: ${taskName}`)
+  bot.sendMessage(chatId, `The task was created with the name: ${taskName}.`)
   return;
 }
 
@@ -147,6 +147,11 @@ bot.on('message', async (msg) => {
 
   if (messageText.startsWith('/reminder'))  {
     await createReminder(chatId, messageText)
+    return;
+  }
+
+  if(messageText.toLowerCase() == 'hi' || messageText.toLowerCase() == 'hello') {
+    bot.sendMessage(chatId, `Hello ${msg.from.first_name}. I'm happy to assist you!`);
     return;
   }
 
