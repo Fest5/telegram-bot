@@ -1,9 +1,20 @@
 const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
+const winston = require('winston');
 const {getTasks, completeTask, createTask, setReminder} = require('./services')
 const {formatTaskList} = require('./utils')
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+
+const logger = winston.createLogger({
+  level: 'info', // Set the desired log level
+  format: winston.format.simple(), // Set the log format
+  transports: [
+    new winston.transports.Console(), // Output logs to the console
+    // Add more transports if needed, such as writing logs to a file
+  ],
+});
+
 
 // Functions
 async function sendTaskList(chatId, reminder) {
@@ -35,7 +46,7 @@ async function newTask(chatId, messageText) {
 
   const newTaskStatus = await createTask(chatId.toString(), taskName)
 
-  if(!newTaskStatus === 'success') {
+  if(newTaskStatus !== 'success') {
     bot.sendMessage(chatId, "Error creating the task.");
     return;
   }
@@ -43,15 +54,13 @@ async function newTask(chatId, messageText) {
   return;
 }
 
-async function completeTask (chatId, messageText, userTasks) {
+async function concludeTask (chatId, messageText, userTasks) {
   // Separate the command and the task name
   const taskName = messageText.substring('/complete'.length).trim();
 
   if (taskName) {
     // If the user has provided a task name, complete it
     const task = userTasks.find((task) => task.name === taskName);
-
-    console.log(task)
 
     if (task) {
       await completeTask(chatId.toString(), task.id.toString());
@@ -113,6 +122,8 @@ bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const messageText = msg.text;
 
+  logger.log('info', `Message received: ${messageText}`)
+
   // View task list
 
   if (messageText.startsWith('/list'))  {
@@ -139,7 +150,7 @@ bot.on('message', async (msg) => {
       return;
     }
     
-    await completeTask(chatId, messageText, userTasks)
+    await concludeTask(chatId, messageText, userTasks)
     return;
   }
 
@@ -158,8 +169,6 @@ bot.on('message', async (msg) => {
   // If the message isn't a command
 
   bot.sendMessage(chatId, "Sorry, I didn't understand that command. Please try again.");
-
-  console.log('mensaje recibido:', messageText)
 
 })
 
