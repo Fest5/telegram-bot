@@ -45,7 +45,7 @@ async function newTask(chatId, messageText) {
     return;
   }
 
-  const newTaskStatus = await createTask(chatId.toString(), taskName)
+  const newTaskStatus = createTask(chatId.toString(), taskName)
 
   if(newTaskStatus !== 'success') {
     bot.sendMessage(chatId, "Error creating the task.");
