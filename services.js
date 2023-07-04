@@ -40,13 +40,6 @@ async function completeTask(userId, taskId) {
     const taskRef = db.collection('users').doc(userId).collection('tasks').doc(taskId);
 
     return taskRef.update({ status: 'completed' })
-        .then(() => {
-        console.log('Task marked as completed');
-        })
-        .catch((error) => {
-        console.error('Error completing task:', error);
-        throw error;
-        });
 }
 
 // Function to send the reminder message
