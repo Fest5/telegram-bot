@@ -28,6 +28,7 @@ async function sendTaskList(chatId, reminder) {
   const markdownFormattedList = formatTaskList(allTasks, reminder)
 
   bot.sendMessage(chatId, markdownFormattedList, { parse_mode: 'Markdown' });
+  logger.info(`List sent to ${chatId}, with ${markdownFormattedList}`)
   return;
 }
 
@@ -48,9 +49,11 @@ async function newTask(chatId, messageText) {
 
   if(newTaskStatus !== 'success') {
     bot.sendMessage(chatId, "Error creating the task.");
+    logger.error(`Error at creating task. Service status: ${newTaskStatus}`)
     return;
   }
   bot.sendMessage(chatId, `The task was created with the name: ${taskName}.`)
+  logger.info(`Created new task for user ${chatId}: ${taskName}`)
   return;
 }
 
@@ -65,6 +68,7 @@ async function concludeTask (chatId, messageText, userTasks) {
     if (task) {
       await completeTask(chatId.toString(), task.id.toString());
       bot.sendMessage(chatId, `Task ${taskName} completed!`);
+      logger.info(`Task completed for ${chatId}: ${taskName}`)
     } else {
       bot.sendMessage(chatId, `Task ${taskName} not found!`);
     }
@@ -99,7 +103,8 @@ async function createReminder (chatId, messageText) {
     // Schedule the reminder task
     scheduleReminder(chatId, hour);
 
-    bot.sendMessage(chatId, `Reminder set for ${hour}:00 every day (Argentina Time Zone).`);
+    bot.sendMessage(chatId, `Reminder set for ${hour}:00 every day (USA Time Zone).`);
+    logger.info(`Reminder set for ${chatId} at ${hour}`)
     return;
   } else {
     // Invalid hour, send an error message
