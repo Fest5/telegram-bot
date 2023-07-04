@@ -19,21 +19,22 @@ async function getTasks(userId, status) {
   
 // Function to create a task for a specific user
 async function createTask(userId, taskName) {
-
     const userRef = db.collection('users').doc(userId);
     const newTaskRef = userRef.collection('tasks').doc();
 
-    await newTaskRef.set({
-        id: newTaskRef.id,
-        name: taskName,
-        status: 'pending',
-    }).then(() => {
-        console.log('holaaaaaaaaaa')
-        const status = 'success'
-        return status
-    })
-    .catch((err) => err)
+    try {
+        await newTaskRef.set({
+            id: newTaskRef.id,
+            name: taskName,
+            status: 'pending',
+        });
+
+        return 'success';
+    } catch (err) {
+        return 'failure';
+    }
 }
+
   
 async function completeTask(userId, taskId) {
     const taskRef = db.collection('users').doc(userId).collection('tasks').doc(taskId);
