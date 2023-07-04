@@ -45,16 +45,18 @@ async function newTask(chatId, messageText) {
     return;
   }
 
-  const newTaskStatus = createTask(chatId.toString(), taskName)
+  const newTaskStatus = await createTask(chatId.toString(), taskName)
 
-  if(await newTaskStatus !== 'success') {
-    bot.sendMessage(chatId, "Error creating the task.");
-    logger.error(`Error at creating task. Service status: ${newTaskStatus}`)
+  if(newTaskStatus == 'success') {
+    bot.sendMessage(chatId, `The task was created with the name: ${taskName}.`)
+    logger.info(`Created new task for user ${chatId}: ${taskName}`)
     return;
   }
-  bot.sendMessage(chatId, `The task was created with the name: ${taskName}.`)
-  logger.info(`Created new task for user ${chatId}: ${taskName}`)
+
+  bot.sendMessage(chatId, "Error creating the task.");
+  logger.error(`Error at creating task. Service status: ${newTaskStatus}`)
   return;
+  
 }
 
 async function concludeTask (chatId, messageText, userTasks) {
