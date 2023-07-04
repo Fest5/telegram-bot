@@ -27,7 +27,11 @@ async function createTask(userId, taskName) {
         id: newTaskRef.id,
         name: taskName,
         status: 'pending',
-    }).then(() => 'success')
+    }).then(() => {
+        console.log('holaaaaaaaaaa')
+        const status = 'success'
+        return status
+    })
     .catch((err) => err)
 }
   
