@@ -23,16 +23,12 @@ async function createTask(userId, taskName) {
     const userRef = db.collection('users').doc(userId);
     const newTaskRef = userRef.collection('tasks').doc();
 
-    console.log(newTaskRef.id)
-
     await newTaskRef.set({
         id: newTaskRef.id,
         name: taskName,
         status: 'pending',
-    }).then((result) => {
-        return 'success'
-    }
-    ).catch(err => {return err})
+    }).then(() => 'success')
+    .catch((err) => err)
 }
   
 async function completeTask(userId, taskId) {
