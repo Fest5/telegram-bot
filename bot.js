@@ -15,6 +15,8 @@ const logger = winston.createLogger({
   ],
 });
 
+let scheduledReminder;
+
 
 // Functions
 async function sendTaskList(chatId, reminder) {
@@ -114,9 +116,23 @@ async function createReminder (chatId, messageText) {
   }
 }
 
+async function deleteReminder (chatId) {
+  if(scheduledReminder) {
+    scheduledReminder.stop()
+    scheduledReminder = null
+    bot.sendMessage(chatId, `The reminder was stopped`);
+    logger.info(`Reminder stopped for ${chatId}`)
+    return;
+  } else {
+    bot.sendMessage(chatId, `There wasn't a reminder set.`);
+    return;
+  }
+ 
+}
+
 // Schedule the task to run at the specified hour every day
 function scheduleReminder(chatId, hour) {
-  cron.schedule(`0 ${hour} * * *`, () => {
+  scheduledReminder = cron.schedule(`0 ${hour} * * *`, () => {
     sendTaskList(chatId, true);
   });
 }
@@ -168,6 +184,11 @@ bot.on('message', async (msg) => {
     return;
   }
 
+  if (messageText.startsWith('/stop'))  {
+    await deleteReminder(chatId, messageText)
+    return;
+  }
+
   if(messageText.toLowerCase() == 'hi' || messageText.toLowerCase() == 'hello') {
     bot.sendMessage(chatId, `Hello ${msg.from.first_name}. I'm happy to assist you!`);
     return;
@@ -182,6 +203,10 @@ bot.on('message', async (msg) => {
 // Start the bot
 bot.on('polling_error', (error) => {
   console.log(`Polling error: ${error}`);
+});
+
+bot.on('webhook_error', (error) => {
+  console.log(`Webhook error: ${error.code}`);  // => 'EPARSE'
 });
 
 console.log('Bot has started...');
